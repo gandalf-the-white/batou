@@ -1,0 +1,19 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for ansible/roles/oracle
+packages:
+  - curl
+  - tree
+  - unzip
+  - nginx
+  - jq
+
+nats_cli_url: "https://github.com/nats-io/natscli/releases/download"
+# nats_cli_version: "0.1.5"
+nats_cli_version: "0.2.3"
+
+nsc_url: "https://github.com/nats-io/nsc/releases/download"
+nsc_version: "v2.11.0"
+
+nkeys_url: "https://github.com/nats-io/nkeys/releases/download"
+nkeys_version: "v0.4.10"

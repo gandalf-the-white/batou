@@ -1,0 +1,60 @@
+---
+- name: install Nats
+  hosts: control
+  become: true
+  serial: 1
+  vars:
+    prefix: 192.188.10
+    name_cluster: wasmcloud
+    port_cluster: 6222
+    area: south
+    dockerlogin: "gandalfthewhite"
+    dockerpassword: "vtn@deb4jqn1VFX2hzk"
+    nscdirectory: /srv/jwt
+    http_proxy: ""
+    https_proxy: ""
+    no_proxy: "127.0.0.1,localhost"
+
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    no_proxy: "127.0.0.1,localhost"
+
+  roles:
+    - oracle
+
+- name: install Jetstream KV on servers
+  hosts: servers
+  become: true
+  serial: 1
+
+  vars:
+    http_proxy: ""
+    https_proxy: ""
+    no_proxy: "127.0.0.1,localhost"
+
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    no_proxy: "127.0.0.1,localhost"
+
+  roles:
+    - jetstream
+
+- name: install WADM and Wasmcloud on servers
+  hosts: all
+  become: true
+  serial: 1
+
+  vars:
+    http_proxy: ""
+    https_proxy: ""
+    no_proxy: "127.0.0.1,localhost"
+
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    no_proxy: "127.0.0.1,localhost"
+
+  roles:
+    - wasmcloud

@@ -1,0 +1,32 @@
+host: 0.0.0.0
+port: {{ hostvars[inventory_hostname].nats_port }}
+
+http_port: 8222
+
+jetstream: enabled
+
+jetstream: {
+    store_dir: /srv/storage
+    domain: leaf
+}
+
+# websocket: {
+#     port: {{ hostvars[inventory_hostname].socket_port }}
+#     no_tls: true
+# }
+
+leafnodes: {
+    remotes: [
+        {
+          url: "tls://route_user:pwd@{{ hostvars[inventory_hostname].host_attach }}:{{ hostvars[inventory_hostname].port_attach }}",
+          # TLS pour la communication inter-nœuds
+          tls {
+              cert_file: "/srv/certs/{{area}}-{{hostvars[inventory_hostname].ansible_name}}.crt"
+              key_file: "/srv/certs/{{area}}-{{hostvars[inventory_hostname].ansible_name}}.key"
+              ca_file: "/srv/certs/ca.crt"
+              verify: true
+          }
+          credentials: "{{ nats_local_credential }}"
+        },
+    ]
+}

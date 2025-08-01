@@ -1,0 +1,60 @@
+---
+- name: install Nats
+  hosts: control
+  become: true
+  serial: 1
+  vars:
+    prefix: ${prefix}
+    name_cluster: ${name_cluster}
+    port_cluster: ${port_cluster}
+    area: ${area}
+    dockerlogin: "${dockerlogin}"
+    dockerpassword: "${dockerpassword}"
+    nscdirectory: ${nscdirectory}
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  environment:
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  roles:
+    - oracle
+
+- name: install Jetstream KV on servers
+  hosts: servers
+  become: true
+  serial: 1
+
+  vars:
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  environment:
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  roles:
+    - jetstream
+
+- name: install WADM and Wasmcloud on servers
+  hosts: all
+  become: true
+  serial: 1
+
+  vars:
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  environment:
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  roles:
+    - wasmcloud

@@ -1,0 +1,167 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for ansible/roles/nats
+- name: Show hostname
+  debug:
+    msg: "Host: {{ ansible_host }} - name: {{ ansible_name }} - attach: {{ host_attach }} port: {{ port_attach }}"
+  when: ansible_name in groups['leafs']
+
+- name: apt update
+  apt:
+    update-cache: yes
+    cache_valid_time: 3600
+
+- name: Install dependencies
+  apt:
+    name: "{{ packages }}"
+    state: present
+
+##########################################
+# Install NATS
+##########################################
+- name: Download nats cli
+  get_url:
+    url: "{{ nats_cli_url }}/v{{ nats_cli_version }}/nats-{{ nats_cli_version }}-amd64.deb"
+    dest: "/tmp/nats-{{ nats_cli_version }}-amd64.deb"
+  # when: ansible_name in groups['servers']
+
+- name: Install package
+  package:
+    deb: "/tmp/nats-{{ nats_cli_version }}-amd64.deb"
+
+- name: Add proxy
+  blockinfile:
+    path: /usr/lib/systemd/system/nats-server.service
+    # marker: "<!-- ANSIBLE MANAGED BLOCK -->"
+    insertafter: "KillSignal=SIGUSR2"
+    block: |
+      Environment="http_proxy={{ http_proxy }}"
+      Environment="https_proxy={{ http_proxy }}"
+      Environment="no_proxy=localhost,127.0.0.1,.bebop.lan"
+  when: http_proxy | length != 0
+
+- name: Create Nats directory
+  file:
+    path: "/srv/{{ item }}"
+    state: directory
+    owner: nats
+    group: nats
+  loop:
+    - storage
+    - jwt
+    - creds
+    - nats
+    - certs
+  tags:
+    - dire
+
+# - name: Create Nats directory
+#   file:
+#     path: "/srv/jwt"
+#     state: directory
+#     owner: nats
+#     group: nats
+#   tags:
+#     - dire
+# - name: Create Creds directory
+#   file:
+#     path: "/srv/creds"
+#     state: directory
+#     owner: nats
+#     group: nats
+#   tags:
+#     - dire
+##########################################
+# Install NATS-TOP
+##########################################
+- name: Download nats-top
+  get_url:
+    url: "{{ nats_top_url }}/{{ nats_top_version }}/nats-top-{{ nats_top_version }}-linux-x86_amd64.deb"
+    dest: "/tmp/nats-top-{{ nats_top_version }}-linux-x86_amd64.deb"
+  # when: ansible_name in groups['servers']
+
+- name: Install package
+  package:
+    deb: "/tmp/nats-top-{{ nats_top_version }}-linux-x86_amd64.deb"
+
+##########################################
+# Install server
+##########################################
+
+# - name: Create Nats directory
+#   file:
+#     path: /srv/nats/storage
+#     state: directory
+#     owner: nats
+#     group: nats
+
+- name: Reload server nats config
+  template:
+    src: nats-server.conf.j2
+    dest: /etc/nats-server.conf
+  # notify: restart nats
+  when: ansible_name in groups['servers']
+
+##########################################
+# Install leafs
+##########################################
+
+- name: Reload leafs nats config
+  template:
+    src: nats-leafs.conf.j2
+    dest: /etc/nats-server.conf
+  # notify: restart nats
+  when: ansible_name in groups['leafs']
+##########################################
+# Send all server credentials accounts
+##########################################
+
+# - name: push files
+#   copy:
+#     src: "credentials/{{item}}"
+#     dest: "/srv/nats/{{ item }}"
+#     owner: nats
+#     group: nats
+#     mode: "0600"
+#   loop:
+#     - "sys.creds"
+#     - "wadmapp.creds"
+#     - "wadmconsumer.creds"
+##########################################
+# Reload nats servers leafs
+##########################################
+
+# - name: Reload server daemon
+#   service:
+#     name: nats-server
+#     state: restarted
+#     daemon_reload: true
+#   loop: "{{ groups['servers'] }}"
+
+# - name: Reload  leaf daemon
+#   service:
+#     name: nats-server
+#     state: restarted
+#     daemon_reload: true
+#   loop: "{{ groups['leafs'] }}"
+
+##########################################
+# Create contexts
+##########################################
+# - name: Create context on the servers
+#   shell:
+#     cmd: |
+#       nats context save main-sys      --creds /srv/nats/sys.creds
+#       nats context save main-wadmapp  --creds /srv/nats/wadmapp.creds
+#       nats context save main-consumer --creds /srv/nats/wadmconsumer.creds
+#   when: ansible_name in groups['servers']
+
+##########################################
+# Add ip address nats
+##########################################
+
+- name: Add nats address
+  lineinfile:
+    dest: /etc/hosts
+    backup: yes
+    line: "{{ oracle }} nats.bebop.lan"

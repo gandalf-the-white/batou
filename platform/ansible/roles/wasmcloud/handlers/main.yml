@@ -1,0 +1,33 @@
+#SPDX-License-Identifier: MIT-0
+---
+# handlers file for ansible/roles/wasmcloud
+- name: start wadm
+  service:
+    name: wadm-service
+    state: started
+    enabled: yes
+
+- name: restart wadm
+  service:
+    name: wadm-service
+    state: restarted
+
+- name: start wasmcloud
+  service:
+    name: wasmcloud-service
+    state: started
+
+- name: restart wasmcloud
+  service:
+    name: wasmcloud-service
+    state: restarted
+
+- name: start nats
+  service:
+    name: nats-server
+    state: started
+
+- name: restart nats
+  service:
+    name: nats-server
+    state: restarted

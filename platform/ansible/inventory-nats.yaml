@@ -1,0 +1,61 @@
+all:
+  children:
+    control:
+      hosts:
+    servers:
+      hosts:
+        irland:
+          ansible_host: 192.188.10.90
+          ansible_name: irland
+          nats_port: 4222
+          leaf_port: 7422
+          socket_port: 4223
+          cluster_port: 6222
+          registry: 192.188.10.110
+          label: irland
+          wadm_enabled: true
+        england:
+          ansible_host: 192.188.10.91
+          ansible_name: england
+          nats_port: 4222
+          leaf_port: 7422
+          socket_port: 4223
+          cluster_port: 6222
+          registry: 192.188.10.110
+          label: england
+          wadm_enabled: false
+        france:
+          ansible_host: 192.188.10.92
+          ansible_name: france
+          nats_port: 4222
+          leaf_port: 7422
+          socket_port: 4223
+          cluster_port: 6222
+          registry: 192.188.10.110
+          label: france
+          wadm_enabled: true
+    leafs:
+      hosts:
+        dublin:
+          ansible_host: 192.188.10.93
+          ansible_name: dublin
+          nats_port: 4222
+          socket_port: 4223
+          host_attach: 192.188.10.90
+          port_attach: 7422
+          registry: 192.188.10.110
+          label: dublin
+        paris:
+          ansible_host: 192.188.10.94
+          ansible_name: paris
+          nats_port: 4222
+          socket_port: 4223
+          host_attach: 192.188.10.92
+          port_attach: 7422
+          registry: 192.188.10.110
+          label: paris
+
+  vars:
+    ansible_user: spike
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_private_key_file: ~/.ssh/id_ed25519_proxmox

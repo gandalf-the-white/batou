@@ -1,0 +1,170 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for ansible/roles/wasmcloud
+
+##########################################
+# Install wash CLI
+##########################################
+
+- name: Check if wash exists
+  stat:
+    path: /usr/local/bin/wash
+  register: stat_wash
+
+- name: Download wasmcloud cli
+  get_url:
+    url: "https://packagecloud.io/install/repositories/wasmcloud/core/script.deb.sh"
+    dest: "/tmp/script.deb.sh"
+    mode: "0740"
+  when: not stat_wash.stat.exists
+
+- name: Run wasmcloud script
+  command: bash ./script.deb.sh
+  become: yes
+  become_user: root
+  args:
+    chdir: /tmp
+  when: not stat_wash.stat.exists
+
+- name: apt update
+  apt:
+    update-cache: yes
+    cache_valid_time: 3600
+  when: not stat_wash.stat.exists
+
+- name: Install dependencies
+  apt:
+    name: "wash"
+    state: present
+  when: not stat_wash.stat.exists
+
+  ##########################################
+# Install WADM
+##########################################
+
+- name: Check boolean
+  debug:
+    msg: "{{ hostvars[inventory_hostname].wadm_enabled }}"
+  when: ansible_name in groups['servers']
+  tags:
+    - debug
+
+- name: Check if wadm exists
+  stat:
+    path: /usr/local/bin/wadm
+  register: stat_wadm
+
+- name: Download WADM
+  get_url:
+    url: "{{ wadm_url }}/{{ wadm_version }}/wadm-{{ wadm_version }}-{{ wadm_os }}-{{ wadm_arch }}.tar.gz"
+    dest: "/tmp/wadm-{{ wadm_version }}-{{ wadm_os }}-{{ wadm_arch }}.tar.gz"
+  # when: not stat_wadm.stat.exists
+  when: ansible_name in groups['servers'] and  hostvars[inventory_hostname]['wadm_enabled'] == true
+
+- name: Unarchive WADM
+  unarchive:
+    src: "/tmp/wadm-{{ wadm_version }}-{{ wadm_os }}-{{ wadm_arch }}.tar.gz"
+    dest: /tmp
+    remote_src: yes
+  # when: not stat_wadm.stat.exists
+  when: ansible_name in groups['servers'] and  hostvars[inventory_hostname]['wadm_enabled'] == true
+
+- name: Move wadm
+  copy:
+    src: "/tmp/wadm-{{ wadm_version }}-{{ wadm_os }}-{{ wadm_arch }}/wadm"
+    dest: /usr/local/bin/wadm
+    mode: "0755"
+    remote_src: yes
+  # when: not stat_wadm.stat.exists
+  when: ansible_name in groups['servers'] and  hostvars[inventory_hostname]['wadm_enabled'] == true
+
+- name: create wadm service
+  template:
+    src: wadm-service.service.j2
+    dest: /usr/lib/systemd/system/wadm-service.service
+    owner: root
+    group: root
+  # when: not stat_wadm.stat.exists
+  when: ansible_name in groups['servers'] and  hostvars[inventory_hostname]['wadm_enabled'] == true
+
+- name: Create Wadm Environment Service
+  file:
+    path: /etc/systemd/system/wadm-service.service.d/
+    state: directory
+  # when: not stat_wadm.stat.exists
+  when: ansible_name in groups['servers'] and  hostvars[inventory_hostname]['wadm_enabled'] == true
+
+- name: Copy Template Environment for Service
+  template:
+    src: wadm.conf.j2
+    dest: /etc/systemd/system/wadm-service.service.d/wadm.conf
+    owner: root
+    group: root
+  notify: start wadm
+  # when: not stat_wadm.stat.exists
+  when: ansible_name in groups['servers'] and  hostvars[inventory_hostname]['wadm_enabled'] == true
+
+##########################################
+# Install WASMCLOUD
+##########################################
+- name: Check if wasmcloud exists
+  stat:
+    path: /usr/local/bin/wasmcloud
+  register: stat_wasmcloud
+  # when: ansible_name in groups['leafs']
+
+- name: Download wasmcloud
+  get_url:
+    url: "{{ wasmcloud_url }}/{{ wasmcloud_version}}/wasmcloud-x86_64-unknown-linux-musl"
+    dest: "/usr/local/bin/wasmcloud"
+    mode: "0740"
+  # when: ansible_name in groups['leafs']
+
+- name: Create Wasmcloud Service
+  template:
+    src: wasmcloud-service.service.j2
+    dest: /usr/lib/systemd/system/wasmcloud-service.service
+    owner: root
+    group: root
+  # when: ansible_name in groups['leafs']
+
+- name: Create Wasmcloud Environment Service
+  file:
+    path: /etc/systemd/system/wasmcloud-service.service.d/
+    state: directory
+  # when: ansible_name in groups['leafs']
+
+- name: Copy Servers Template Environment for Service
+  template:
+    src: wasmcloud-servers.conf.j2
+    dest: /etc/systemd/system/wasmcloud-service.service.d/wasmcloud.conf
+    owner: root
+    group: root
+  when: ansible_name in groups['servers']
+
+- name: Copy Leafs Template Environment for Service
+  template:
+    src: wasmcloud-leafs.conf.j2
+    dest: /etc/systemd/system/wasmcloud-service.service.d/wasmcloud.conf
+    owner: root
+    group: root
+  when: ansible_name in groups['leafs']
+
+##########################################
+# Start WASMCLOUD
+##########################################
+- name: Reload the new wasmcloud service
+  service:
+    name: wasmcloud-service
+    state: started
+    enabled: yes
+  # when: ansible_name in groups['leafs']
+
+- meta: flush_handlers
+# - name: restart wasmcloud
+#   service:
+#     name: wasmcloud-service
+#     state: restarted
+#   # when: ansible_name in groups['leafs']
+
+# - meta: flush_handlers

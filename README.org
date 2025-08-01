@@ -4,7 +4,7 @@
 ** Objective
 To build a quiet simple WasmCloud cluster and some leafs, just for fun.
 ** Overview
-[[./images/KUSANAGI-2025-08-01-0900.png]]
+[[images/KUSANAGI-2025-08-01-0900.png]]
 * Install
 ** Process
 + Check the /variables.tf/ file to define the architecture

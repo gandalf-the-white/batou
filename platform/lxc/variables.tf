@@ -1,33 +1,10 @@
-# The MIT License (MIT)
-
-# Copyright (c) 2024 Laurent Valeyre
-
-# Permission is hereby granted, free of charge, to any person obtaining
-# a copy of this software and associated documentation files (the
-# "Software"), to deal in the Software without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish,
-# distribute, sublicense, and/or sell copies of the Software, and to
-# permit persons to whom the Software is furnished to do so, subject to
-# the following conditions:
-
-# The above copyright notice and this permission notice shall be
-# included in all copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 variable "userctn" { default = "spike" }
 variable "publkeyctn" { default = "~/.ssh/id_ed25519_proxmox.pub" }
 variable "privkeyctn" { default = "~/.ssh/id_ed25519_proxmox" }
 variable "token" {}
 variable "token_id" {}
 variable "fqdn_pmox" {}
-variable "bridge" { default = "vmbr2" }
+variable "bridge" { default = "vmbr3" }
 variable "docker_login" {}
 variable "docker_password" {}
 
@@ -36,7 +13,9 @@ variable "nameserver" { default = "192.168.68.1" }
 variable "target_node" { default = "proxmox" }
 variable "cloudinit" { default = "local" }
 variable "storage" { default = "local-lvm" }
-variable "template" { default = "ubuntu-2404-30" }
+variable "template" { default = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst" }
+
+variable "password" { default = "password" }
 
 # watch "curl -o /dev/null -s -w 'Establish Connection: %{time_connect}s\nTTFB: %{time_starttransfer}s\nTotal: %{time_total}s\n'  127.0.0.1:8000"
 

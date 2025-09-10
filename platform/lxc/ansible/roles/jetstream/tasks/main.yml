@@ -1,0 +1,46 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for ansible/roles/jetstream
+##########################################
+# Create KeyValues
+##########################################
+
+- name: Create lattice and bucket on server
+  shell:
+    cmd: |
+      nats context select main-wadmapp
+      nats --domain wasmcloud kv add --replicas 3 LATTICEDATA_default
+      nats --domain wasmcloud kv add --replicas 3 CONFIGDATA_default
+      nats --domain wasmcloud kv add --replicas 3 wadm_manifests
+      nats --domain wasmcloud kv add --replicas 3 wadm_state
+  when: hostvars[inventory_hostname]['master_enabled'] == true and groups['servers'] | length > 2
+  # when: ansible_name in groups['servers'][0]
+
+- name: Create lattice and bucket on server
+  shell:
+    cmd: |
+      nats context select main-wadmapp
+      nats --domain wasmcloud kv add LATTICEDATA_default
+      nats --domain wasmcloud kv add CONFIGDATA_default
+      nats --domain wasmcloud kv add wadm_manifests
+      nats --domain wasmcloud kv add wadm_state
+  when: hostvars[inventory_hostname]['master_enabled'] == true and groups['servers'] | length == 1
+  # when: ansible_name in groups['servers'][0]
+
+##########################################
+# Reload nats servers leafs
+##########################################
+
+- name: Reload server daemon
+  service:
+    name: nats-server
+    state: restarted
+    daemon_reload: true
+  loop: "{{ groups['servers'] }}"
+
+- name: Reload  leaf daemon
+  service:
+    name: nats-server
+    state: restarted
+    daemon_reload: true
+  loop: "{{ groups['leafs'] }}"

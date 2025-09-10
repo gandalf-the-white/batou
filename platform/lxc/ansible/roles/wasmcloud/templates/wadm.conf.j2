@@ -1,0 +1,5 @@
+[Service]
+Environment="RUST_LOG=debug,hyper=info,async_nats=info,oci_client=info,cranelift_codegen=warn"
+Environment="WASMCLOUD_LOG_LEVEL=info"
+Environment="WADM_NATS_CREDS_FILE={{ nats_local_credential }}"
+Environment="WADM_NATS_SERVER={{ hostvars[inventory_hostname].ansible_host }}:{{ hostvars[inventory_hostname].nats_port }}"

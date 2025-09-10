@@ -1,0 +1,76 @@
+host: 0.0.0.0
+port: {{ hostvars[inventory_hostname].nats_port }}
+
+server_name: {{ hostvars[inventory_hostname].ansible_name }}
+
+http_port: 8222
+
+leafnodes: {
+    port: {{ hostvars[inventory_hostname].leaf_port }}
+
+    # TLS pour la communication inter-nœuds
+    tls {
+        cert_file: "/srv/certs/{{area}}-{{hostvars[inventory_hostname].ansible_name}}.crt"
+        key_file: "/srv/certs/{{area}}-{{hostvars[inventory_hostname].ansible_name}}.key"
+        ca_file: "/srv/certs/ca.crt"
+        verify: true
+    }
+}
+
+websocket: {
+    port: {{ hostvars[inventory_hostname].socket_port }}
+    no_tls: false
+
+    # TLS pour la communication websocket
+    tls {
+        cert_file: "/srv/certs/{{area}}-{{hostvars[inventory_hostname].ansible_name}}.crt"
+        key_file: "/srv/certs/{{area}}-{{hostvars[inventory_hostname].ansible_name}}.key"
+        ca_file: "/srv/certs/ca.crt"
+        verify: true
+    }
+}
+
+jetstream: enabled
+
+jetstream: {
+    store_dir: /srv/storage
+    domain: wasmcloud
+}
+
+{% if groups['servers']|length > 1 %}
+cluster: {
+    name: {{ name_cluster }}
+
+    listen: {{ hostvars[inventory_hostname].ansible_host }}:{{ hostvars[inventory_hostname].cluster_port }}
+
+    authorization: {
+        user: route_user
+        password: pwd
+        timeout: 0.5
+    }
+
+    # TLS pour la communication inter-nœuds
+    tls {
+        cert_file: "/srv/certs/{{area}}-{{hostvars[inventory_hostname].ansible_name}}.crt"
+        key_file: "/srv/certs/{{area}}-{{hostvars[inventory_hostname].ansible_name}}.key"
+        ca_file: "/srv/certs/ca.crt"
+        verify: true
+    }
+
+    routes: [
+{% for server in groups['servers'] %}
+        nats://route_user:pwd@{{ hostvars[server].ansible_host }}:{{ hostvars[server].cluster_port }}
+{% endfor %}
+    ]
+}
+{% endif %}
+
+
+resolver: URL(https://nats.bebop.lan/jwt/v1/accounts/)
+operator: /srv/jwt/operator.jwt
+#system_account: TODO
+
+# Logging
+debug: false
+trace: false
+logtime: true

@@ -1,0 +1,13 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for ansible/roles/wasmcloud
+wadm_url: "https://github.com/wasmCloud/wadm/releases/download"
+wadm_version: "v0.21.0"
+wadm_os: "linux"
+wadm_arch: "amd64"
+
+wasmcloud_url: "https://github.com/wasmCloud/wasmCloud/releases/download"
+wasmcloud_version: "v1.8.0"
+
+nats_local_credential: "/srv/creds/wadmapp.creds"
+wadm_local_credential: "/srv/creds/consumer.creds"

@@ -1,0 +1,36 @@
+all:
+  children:
+    control:
+      hosts:
+    servers:
+      hosts:
+%{ for server in servers ~}
+        ${server.name}:
+          ansible_host: ${prefix}.${server.octet}
+          ansible_name: ${server.name}
+          nats_port: ${server.natsport}
+          leaf_port: ${server.leafport}
+          socket_port: ${server.socketport}
+          cluster_port: ${server.clusterport}
+          registry: ${prefix}.${server.octetregistry}
+          label: ${server.label}
+          wadm_enabled: ${server.wadm}
+%{ endfor ~}
+    leafs:
+      hosts:
+%{ for leaf in leafs ~}
+        ${leaf.name}:
+          ansible_host: ${prefix}.${leaf.octet}
+          ansible_name: ${leaf.name}
+          nats_port: ${leaf.natsport}
+          socket_port: ${leaf.socketport}
+          host_attach: ${prefix}.${leaf.octetattach}
+          port_attach: ${leaf.portattach}
+          registry: ${prefix}.${leaf.octetregistry}
+          label: ${leaf.label}
+%{ endfor ~}
+
+  vars:
+    ansible_user: ${userctn}
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_private_key_file: ${privkeyctn}

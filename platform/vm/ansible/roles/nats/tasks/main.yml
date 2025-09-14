@@ -19,13 +19,45 @@
 ##########################################
 # Install NATS
 ##########################################
+
+- name: Create group nats
+  group:
+    name: nats
+    state: present
+
+- name: Create user and group nats
+  user:
+    name: nats
+    comment: nats server
+    state: present
+    shell: /usr/sbin/nologin
+    groups: nats
+
+- name: Create nats-server service
+  template:
+    src: nats-server.service.j2
+    dest: /etc/systemd/system/nats-server.service
+    owner: nats
+    group: nats
+
+- name: Download nats server
+  get_url:
+    url: "{{ nats_server_url }}/v{{ nats_server_version }}/nats-server-v{{ nats_server_version }}-amd64.deb"
+    dest: "/tmp/nats-server-v{{ nats_server_version }}-amd64.deb"
+  # when: ansible_name in groups['servers']
+
+- name: Install nats-server package
+  package:
+    deb: "/tmp/nats-server-v{{ nats_server_version }}-amd64.deb"
+
+
 - name: Download nats cli
   get_url:
     url: "{{ nats_cli_url }}/v{{ nats_cli_version }}/nats-{{ nats_cli_version }}-amd64.deb"
     dest: "/tmp/nats-{{ nats_cli_version }}-amd64.deb"
   # when: ansible_name in groups['servers']
 
-- name: Install package
+- name: Install nats-cli package
   package:
     deb: "/tmp/nats-{{ nats_cli_version }}-amd64.deb"
 

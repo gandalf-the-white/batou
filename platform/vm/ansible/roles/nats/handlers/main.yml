@@ -5,9 +5,15 @@
   service:
     name: nats-server
     state: started
+    enabled: true
 
 - name: restart nats
   service:
     name: nats-server
     state: restarted
     daemon_reload: true
+
+- name: enable nats
+  service:
+    name: nats-server
+    enabled: true

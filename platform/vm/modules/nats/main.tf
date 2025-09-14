@@ -11,7 +11,6 @@ locals {
 
 resource "proxmox_vm_qemu" "nats_server" {
   count       = length(var.servers)
-  desc        = "Deploiement VM Ubuntu on Proxmox"
   name        = "${var.area}-${var.servers[count.index].name}"
   target_node = var.target_node
   clone       = var.clone
@@ -78,7 +77,6 @@ resource "proxmox_vm_qemu" "nats_server" {
 
 resource "proxmox_vm_qemu" "nats_leaf" {
   count       = length(var.leafs)
-  desc        = "Deploiement VM Ubuntu on Proxmox"
   name        = "${var.area}-${var.leafs[count.index].name}"
   target_node = var.target_node
   clone       = var.clone
@@ -170,7 +168,7 @@ resource "local_file" "playbook" {
       servers      = var.servers
       leafs        = var.leafs
       prefix       = var.prefix
-      oracle       = var.oracle
+      oracle       = "${var.prefix}.${var.oracle[0].octet}"
       area         = var.area
       proxy        = var.proxy
       noproxy      = "127.0.0.1,localhost"

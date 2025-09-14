@@ -21,8 +21,9 @@
 
   roles:
     - nats
+    - telemetry
 
-- name: install Nats on servers
+- name: install Nats on leafs
   hosts: leafs
   become: true
   serial: 1

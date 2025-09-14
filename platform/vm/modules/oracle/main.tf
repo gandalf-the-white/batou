@@ -11,7 +11,6 @@ locals {
 
 resource "proxmox_vm_qemu" "oracle_server" {
   count       = length(var.oracles)
-  desc        = "Deploiement VM Ubuntu on Proxmox"
   name        = "oracle"
   target_node = var.target_node
   clone       = var.clone

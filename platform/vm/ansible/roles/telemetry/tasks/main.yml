@@ -1,0 +1,399 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/telemetry
+
+##########################################
+# Install NATS
+##########################################
+
+- name: Download opentelemetry
+  get_url:
+    url: "{{ otm_url }}/v{{ otm_version }}/otelcol_{{ otm_version }}_linux_amd64.deb"
+    dest: "/tmp/otelcol_{{ otm_version }}_linux_amd64.deb"
+  # when: ansible_name in groups['servers']
+  tags:
+    - otm
+
+- name: Install opentelemetry package
+  package:
+    deb: "/tmp/otelcol_{{ otm_version }}_linux_amd64.deb"
+  tags:
+    - otm
+
+
+
+- name: Config opentelemetry
+  template:
+    src: otel-config.yaml.j2
+    dest: /etc/otelcol/config.yaml
+  # notify: restart otm
+  tags:
+    - otm
+
+##########################################
+# Install PROMETHEUS
+##########################################
+
+- name: Download prometheus
+  get_url:
+    url: "{{ prometheus_url }}/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+  tags:
+    - prm
+
+- name: Unarchive prometheus
+  unarchive:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+  tags:
+    - prm
+
+- name: Create group prometheus
+  group:
+    name: prometheus
+    state: present
+  tags:
+    - prm
+
+- name: Create user and group prometheus
+  user:
+    name: prometheus
+    comment: prometheus server
+    state: present
+    shell: /usr/sbin/nologin
+    groups: prometheus
+  tags:
+    - prm
+
+- name: Create directory prometheus
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+  loop:
+    - "/etc/prometheus"
+    - "/var/lib/prometheus"
+  tags:
+    - prm
+
+- name: Move prometheus
+  copy:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+    dest: /usr/local/bin/
+    owner: prometheus
+    group: prometheus
+    mode: "0755"
+    remote_src: yes
+  loop:
+    - "prometheus"
+    - "promtool"
+  tags:
+    - prm
+
+- name: Create prometheus service
+  template:
+    src: prometheus-service.j2
+    dest: /etc/systemd/system/prometheus.service
+    owner: prometheus
+    group: prometheus
+  tags:
+    - prm
+
+- name: Add prometheus config
+  template:
+    src: prometheus-yaml.j2
+    dest: /etc/prometheus/prometheus.yml
+    owner: prometheus
+    group: prometheus
+  tags:
+    - prm
+
+##########################################
+# Start PROMETHEUS
+##########################################
+
+- name: enable prometheus
+  service:
+    name: prometheus
+    enabled: true
+  tags:
+    - prm
+
+- name: start prometheus
+  service:
+    name: prometheus
+    state: started
+  tags:
+    - prm
+
+##########################################
+# Install LOKI
+##########################################
+
+- name: Download loki
+  get_url:
+    url: "{{ loki_url }}/v{{loki_version}}/loki-linux-amd64.zip"
+    dest: "/tmp/loki-linux-amd64.zip"
+  tags:
+    - loki
+
+- name: Unarchive loki
+  unarchive:
+    src: "/tmp/loki-linux-amd64.zip"
+    dest: "/tmp"
+    remote_src: yes
+  tags:
+    - loki
+
+- name: Download promtail
+  get_url:
+    url: "{{ promtail_url }}/v{{promtail_version}}/promtail-linux-amd64.zip"
+    dest: "/tmp/promtail-linux-amd64.zip"
+  tags:
+    - loki
+
+- name: Unarchive promtail
+  unarchive:
+    src: "/tmp/promtail-linux-amd64.zip"
+    dest: "/tmp"
+    remote_src: yes
+  tags:
+    - loki
+
+- name: Move loki promtail
+  copy:
+    src: "/tmp/{{ item }}"
+    dest: /usr/local/bin/
+    owner: root
+    group: root
+    mode: "0755"
+    remote_src: yes
+  loop:
+    - "loki-linux-amd64"
+    - "promtail-linux-amd64"
+  tags:
+    - loki
+
+- name: Create loki service
+  template:
+    src: loki-service.j2
+    dest: /etc/systemd/system/loki.service
+  tags:
+    - loki
+
+- name: Create promtail service
+  template:
+    src: promtail-service.j2
+    dest: /etc/systemd/system/promtail.service
+  tags:
+    - loki
+
+- name: Create directory loki promtail
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "/etc/loki"
+    - "/etc/promtail"
+  tags:
+    - loki
+
+- name: Copy loki config
+  template:
+    src: loki-config-yaml.j2
+    dest: /etc/loki/config.yaml
+  tags:
+    - loki
+
+- name: Copy promtail config
+  template:
+    src: promtail-config-yaml.j2
+    dest: /etc/promtail/config.yaml
+  tags:
+    - loki
+
+##########################################
+# Start LOKI PROMTAIL
+##########################################
+
+- name: enable loki
+  service:
+    name: loki
+    enabled: true
+  tags:
+    - loki
+
+- name: start loki
+  service:
+    name: loki
+    state: started
+  tags:
+    - loki
+
+# - name: enable promtail
+#   service:
+#     name: promtail
+#     enabled: true
+#   tags:
+#     - loki
+
+# - name: start promtail
+#   service:
+#     name: promtail
+#     state: started
+#   tags:
+#     - loki
+
+##########################################
+# Install TEMPO
+##########################################
+
+- name: Create group tempo
+  group:
+    name: tempo
+    state: present
+  tags:
+    - tempo
+
+- name: Create user and group tempo
+  user:
+    name: tempo
+    comment: tempo server
+    state: present
+    shell: /usr/sbin/nologin
+    groups: admin, tempo
+  tags:
+    - tempo
+
+- name: Download tempo deb
+  get_url:
+    url: "{{ tempo_url }}/v{{tempo_version}}/tempo_{{tempo_version}}_linux_amd64.deb"
+    dest: "/tmp/tempo_{{tempo_version}}_linux_amd64.deb"
+  tags:
+    - tempo
+
+- name: Install tempo package
+  package:
+    deb: "/tmp/tempo_{{tempo_version}}_linux_amd64.deb"
+  tags:
+    - tempo
+
+- name: Create tempo service
+  template:
+    src: tempo-service.j2
+    dest: /etc/systemd/system/tempo.service
+    owner: tempo
+  tags:
+    - tempo
+
+- name: Create directory tempo
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: tempo
+  loop:
+    - "/etc/tempo"
+  tags:
+    - tempo
+
+- name: Copy tempo config
+  template:
+    src: tempo-config-yaml.j2
+    dest: /etc/tempo/config.yaml
+    owner: tempo
+  tags:
+    - tempo
+
+##########################################
+# Start TEMPO
+##########################################
+
+- name: enable tempo
+  service:
+    name: tempo
+    enabled: true
+  tags:
+    - tempo
+
+- name: start tempo
+  service:
+    name: tempo
+    state: started
+  tags:
+    - tempo
+
+##########################################
+# Restart OTELCOL
+##########################################
+
+- name: restart otm
+  service:
+    name: otelcol
+    state: restarted
+
+##########################################
+# Install GRAFANA
+##########################################
+
+- name: apt update
+  apt:
+    update-cache: yes
+    cache_valid_time: 3600
+  tags:
+    - grafana
+
+- name: Install dependencies
+  apt:
+    name: "{{ packages }}"
+    state: present
+  tags:
+    - grafana
+
+- name: Create keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+  tags:
+    - grafana
+
+- name: Download key
+  shell: wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
+  tags:
+    - grafana
+
+- name: add repository
+  shell: "echo 'deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main' | sudo tee -a /etc/apt/sources.list.d/grafana.list"
+  tags:
+    - grafana
+
+- name: apt update
+  apt:
+    update-cache: yes
+    force_apt_get: yes
+  tags:
+    - grafana
+
+# - ansible.builtin.meta: flush_handlers
+#   tags:
+#     - grafana
+
+- name: Install grafana packages
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+  loop:
+    - "grafana"
+  tags:
+    - grafana
+
+- name: Reload leaf daemon
+  service:
+    name: grafana-server
+    state: restarted
+    daemon_reload: true
+  tags:
+    - grafana

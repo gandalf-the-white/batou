@@ -7,10 +7,10 @@ module "nats" {
   area         = "south"
   target_node  = var.target_node
   bridge       = var.bridge
-  prefix       = "192.188.10"
-  vlan         = "10"
+  prefix       = var.subnet
+  vlan         = var.vlan
   servers      = var.servers
-  oracle       = "192.188.10.110"
+  oracle       = var.oracles
   leafs        = var.leafs
   template     = var.template
   userctn      = var.userctn
@@ -35,8 +35,8 @@ module "oracle" {
   area            = "south"
   target_node     = var.target_node
   bridge          = var.bridge
-  prefix          = "192.188.10"
-  vlan            = "10"
+  prefix          = var.subnet
+  vlan            = var.vlan
   oracles         = var.oracles
   servers         = var.servers
   leafs           = var.leafs

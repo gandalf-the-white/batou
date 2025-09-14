@@ -490,6 +490,13 @@
 # Reload nats servers
 ##########################################
 
+- name: Enable server daemon
+  delegate_to: "{{ item }}"
+  service:
+    name: nats-server
+    enabled: true
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+
 - name: Reload server daemon
   delegate_to: "{{ item }}"
   service:
@@ -501,6 +508,13 @@
 ##########################################
 # Reload nats leafs
 ##########################################
+
+- name: Enable server daemon
+  delegate_to: "{{ item }}"
+  service:
+    name: nats-server
+    enabled: true
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
 
 - name: Reload leaf daemon
   delegate_to: "{{ item }}"

@@ -27,7 +27,7 @@ variable "privkeyctn" { default = "~/.ssh/id_ed25519_proxmox" }
 variable "token" {}
 variable "token_id" {}
 variable "fqdn_pmox" {}
-variable "bridge" { default = "vmbr2" }
+variable "bridge" { default = "vmbr3" }
 variable "docker_login" {}
 variable "docker_password" {}
 
@@ -37,6 +37,9 @@ variable "target_node" { default = "proxmox" }
 variable "cloudinit" { default = "local" }
 variable "storage" { default = "local-lvm" }
 variable "template" { default = "ubuntu-2404-30" }
+
+variable "subnet" { default = "192.188.200" }
+variable "vlan" { default = "200" }
 
 # watch "curl -o /dev/null -s -w 'Establish Connection: %{time_connect}s\nTTFB: %{time_starttransfer}s\nTotal: %{time_total}s\n'  127.0.0.1:8000"
 
@@ -155,7 +158,7 @@ variable "leafs" {
       portattach    = 7422
       octetregistry = "110"
       label         = "dublin"
-    } # , {
+    }, # {
     #   name          = "paris"
     #   octet         = "94"
     #   memory        = 2048
@@ -168,19 +171,20 @@ variable "leafs" {
     #   portattach    = 7422
     #   octetregistry = "110"
     #   label         = "paris"
-    # } , {
-    #   name          = "galway"
-    #   octet         = "95"
-    #   memory        = 2048
-    #   cores         = 2
-    #   sockets       = 1
-    #   swap          = 256
-    #   natsport      = 4222
-    #   socketport    = 4223
-    #   octetattach   = "90"
-    #   portattach    = 7422
-    #   octetregistry = "110"
-    #   label         = "galway"
-    # }
+    # },
+    {
+      name          = "galway"
+      octet         = "95"
+      memory        = 2048
+      cores         = 2
+      sockets       = 1
+      swap          = 256
+      natsport      = 4222
+      socketport    = 4223
+      octetattach   = "90"
+      portattach    = 7422
+      octetregistry = "110"
+      label         = "galway"
+    }
   ]
 }

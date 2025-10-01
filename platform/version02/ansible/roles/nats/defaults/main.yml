@@ -1,0 +1,36 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for ansible/roles/nats
+packages:
+  - curl
+  - unzip
+  - tree
+  - rsync
+  - gcc
+  - git
+  # - nats-server
+  # - emacs-nox
+
+nats_server_url: "https://github.com/nats-io/nats-server/releases/download"
+nats_server_version: "2.11.9"
+
+nats_cli_url: "https://github.com/nats-io/natscli/releases/download"
+nats_cli_version: "0.2.3"
+
+wadm_version: "v0.21.0"
+wadm_os: "linux"
+wadm_arch: "amd64"
+
+wasmcloud_url: "https://github.com/wasmCloud/wasmCloud/releases/download"
+wasmcloud_version: "v1.8.0"
+
+nats_local_credential: "/srv/creds/wadmapp.creds"
+wadm_local_credential: "/srv/creds/wadmconsumer.creds"
+
+nkeys_url: "https://github.com/nats-io/nkeys/releases/download"
+nkeys_version: " v0.4.10"
+
+
+# https://github.com/nats-io/nats-top/releases/download/v0.6.3/nats-top-v0.6.3-linux-x86_amd64.deb
+nats_top_url: "https://github.com/nats-io/nats-top/releases/download"
+nats_top_version: "v0.6.3"

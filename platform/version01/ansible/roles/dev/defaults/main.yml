@@ -1,0 +1,11 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for ansible/roles/dev
+
+# https://go.dev/dl/go1.25.1.linux-amd64.tar.gz
+golang_url: "https://go.dev/dl/"
+golang_version: "1.25.1"
+
+# https://github.com/tinygo-org/tinygo/releases/download/v0.39.0/tinygo_0.39.0_amd64.deb
+tinygo_url: "https://github.com/tinygo-org/tinygo/releases/download/"
+tinygo_version: "0.39.0"

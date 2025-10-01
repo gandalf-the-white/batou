@@ -1,0 +1,42 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for ansible/roles/harbor
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+
+# Domaine utilisé par Harbor (doit pointer vers l’IP publique de la VM)
+harbor_hostname: "harbor.bebop.lan"
+
+# Mot de passe admin Harbor (sera appliqué à l’installation)
+harbor_admin_password: "ChangeMe_S3cure!"
+
+# Version Harbor à installer (bundle offline recommandé)
+harbor_version: "v2.13.0" # adaptez si besoin
+
+# Chemin d'installation
+harbor_install_dir: "/opt/harbor"
+harbor_data_volume: "/data/harbor"
+
+# Choix TLS :
+# 1) Let's Encrypt (certbot en standalone sur la VM) :
+# tls_use_letsencrypt: true
+# letsencrypt_email: "admin@example.com"
+
+# 2) OU certificats fournis (définissez tls_cert_path / tls_key_path) :
+tls_use_custom: false
+tls_cert_path: "/etc/ssl/certs/harbor.bebop.lan.crt"
+tls_key_path: "/etc/ssl/private/harbor.bebop.lan.key"
+
+# (Optionnel) Activer Notary
+enable_notary: true
+
+# (Optionnel) Pare-feu UFW
+configure_ufw: true
+
+# (Optionnel) Distribution (apt basée). Pour RHEL-like, adaptez les tâches Docker.
+pkg_state: present

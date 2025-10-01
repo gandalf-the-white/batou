@@ -1,0 +1,182 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for ansible/roles/harbor
+
+- name: apt update
+  apt:
+    update-cache: yes
+    cache_valid_time: 3600
+  tags:
+    - harbor
+
+- name: Install dependencies
+  apt:
+    name: "{{ packages }}"
+    state: "{{ pkg_state }}"
+  tags:
+    - harbor
+
+- name: Add Docker GPG key
+  ansible.builtin.shell: |
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+  args:
+    creates: /etc/apt/keyrings/docker.gpg
+  tags:
+    - harbor
+
+- name: Add Docker apt repo
+  copy:
+    dest: /etc/apt/sources.list.d/docker.list
+    content: |
+      deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable
+  tags:
+    - harbor
+
+- name: apt update
+  apt:
+    update-cache: yes
+  tags:
+    - harbor
+
+- name: Install Docker Engine & Compose plugin
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: "{{ pkg_state }}"
+    update_cache: true
+  tags:
+    - harbor
+
+- name: Enable & start Docker
+  systemd:
+    name: docker
+    enabled: true
+    state: started
+  tags:
+    - harbor
+
+# 3) Préparer dossiers
+- name: Create install & data dirs
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ harbor_install_dir }}"
+    - "{{ harbor_data_volume }}"
+  tags:
+    - harbor
+
+# 4) Télécharger le bundle Harbor offline
+- name: Download Harbor offline installer
+  get_url:
+    url: "https://github.com/goharbor/harbor/releases/download/{{ harbor_version }}/harbor-offline-installer-{{ harbor_version }}.tgz"
+    dest: "/tmp/harbor-offline-installer-{{ harbor_version }}.tgz"
+    mode: "0644"
+  register: harbor_bundle
+  tags:
+    - harbor
+
+- name: Extract Harbor bundle
+  unarchive:
+    src: "/tmp/harbor-offline-installer-{{ harbor_version }}.tgz"
+    dest: "{{ harbor_install_dir }}"
+    remote_src: true
+    creates: "{{ harbor_install_dir }}/install.sh"
+  tags:
+    - harbor
+
+# 5) Générer harbor.yml
+- name: Template harbor.yml
+  template:
+    src: "harbor.yml.j2"
+    dest: "{{ harbor_install_dir }}/harbor/harbor.yml"
+    mode: "0644"
+  tags:
+    - harbor
+
+##########################################
+# Certificate
+##########################################
+#A copier sur les servers /usr/local/share/ca-certificates/
+#et relancer update-ca-certificates
+
+- name: Copy certificate
+  copy:
+    src: "{{ item.file }}"
+    dest: "/etc/ssl/{{ item.directory }}/{{ item.file }}"
+  loop:
+    - { file: harbor.bebop.lan.crt, directory: certs }
+    - { file: harbor.bebop.lan.key, directory: private }
+  tags:
+    - harbor
+
+- name: catch certificat
+  command: "cat /etc/ssl/certs/harbor.bebop.lan.crt"
+  register: __certificat
+  tags:
+    - certif
+
+- name: Save certificat
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __certificat.stdout }}"
+    dest: /usr/local/share/ca-certificates/harbor.bebop.lan.crt
+    mode: "0600"
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: __certificat is defined
+  tags:
+    - certif
+
+- name: Update certificates
+  delegate_to: "{{ item }}"
+  shell: /usr/sbin/update-ca-certificates
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  tags:
+    - certif
+
+- name: Save certificat
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __certificat.stdout }}"
+    dest: /usr/local/share/ca-certificates/harbor.bebop.lan.crt
+    mode: "0600"
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
+  when: __certificat is defined
+  tags:
+    - certif
+
+- name: Update certificates
+  delegate_to: "{{ item }}"
+  shell: /usr/sbin/update-ca-certificates
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
+  tags:
+    - certif
+
+##########################################
+
+##########################################
+
+# 6) Préparer puis installer Harbor (compose)
+# (Le script prepare rend docker-compose.yml cohérent avec harbor.yml)
+- name: Run prepare
+  command: "/opt/harbor/harbor/prepare"
+  args:
+    chdir: "{{ harbor_install_dir }}"
+  register: prepare_out
+  changed_when: "'Generated configuration file' in prepare_out.stdout or 'generated' in prepare_out.stdout or prepare_out.rc == 0"
+  tags:
+    - harbor
+
+- name: Run install.sh
+  command: "bash install.sh"
+  args:
+    chdir: "{{ harbor_install_dir }}/harbor"
+  register: install_out
+  changed_when: "'Installed' in install_out.stdout or install_out.rc == 0"

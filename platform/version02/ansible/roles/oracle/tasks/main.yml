@@ -1,0 +1,539 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for ansible/roles/oracle
+- name: Show hostname
+  debug:
+    msg: "Host: {{ ansible_host }} - name: {{ ansible_name }} - attach: {{ host_attach }} port: {{ port_attach }}"
+  when: ansible_name in groups['leafs']
+
+- name: apt update
+  apt:
+    update-cache: yes
+    cache_valid_time: 3600
+
+- name: Install dependencies
+  apt:
+    name: "{{ packages }}"
+    state: present
+
+##########################################
+# Install NATS
+##########################################
+
+- name: Download nats cli
+  get_url:
+    url: "{{ nats_cli_url }}/v{{ nats_cli_version }}/nats-{{ nats_cli_version }}-amd64.deb"
+    dest: "/tmp/nats-{{ nats_cli_version }}-amd64.deb"
+
+- name: Install package
+  package:
+    deb: "/tmp/nats-{{ nats_cli_version }}-amd64.deb"
+
+##########################################
+# Install NSC and NKEYS
+##########################################
+
+- name: Download nsc
+  get_url:
+    url: "{{ nsc_url }}/{{ nsc_version }}/nsc-{{ nsc_version }}-amd64.deb"
+    dest: "/tmp/nsc-{{ nsc_version }}-amd64.deb"
+
+- name: Install nsc
+  package:
+    deb: "/tmp/nsc-{{ nsc_version }}-amd64.deb"
+
+- name: Download nkeys
+  get_url:
+    url: "{{ nkeys_url}}/{{ nkeys_version}}/nkeys-{{ nkeys_version }}-amd64.deb"
+    dest: "/tmp/nkeys-{{ nkeys_version }}-amd64.deb"
+
+- name: Install nkeys
+  package:
+    deb: "/tmp/nkeys-{{ nkeys_version }}-amd64.deb"
+
+##########################################
+# Certificate
+##########################################
+#A copier sur les servers /usr/local/share/ca-certificates/
+#et relancer update-ca-certificates
+
+- name: Copy certificate
+  copy:
+    src: "{{ item.file }}"
+    dest: "/etc/ssl/{{ item.directory }}/{{ item.file }}"
+  loop:
+    - { file: nats.bebop.lan.crt, directory: certs }
+    - { file: nats.bebop.lan.key, directory: private }
+
+- name: catch certificat
+  command: "cat /etc/ssl/certs/nats.bebop.lan.crt"
+  register: __certificat
+  tags:
+    - certif
+
+- name: Save certificat
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __certificat.stdout }}"
+    dest: /usr/local/share/ca-certificates/nats.bebop.lan.crt
+    mode: "0600"
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: __certificat is defined
+  tags:
+    - certif
+
+- name: Update certificates
+  delegate_to: "{{ item }}"
+  shell: /usr/sbin/update-ca-certificates
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  tags:
+    - certif
+
+##########################################
+# Install nginx
+##########################################
+
+- name: Create directory
+  file:
+    path: /var/www/nats.bebop.lan/jwt/v1/accounts/
+    state: directory
+    mode: "0755"
+
+- name: Démarrer et activer Nginx
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Copier un fichier de configuration Nginx personnalisé
+  template:
+    src: nats.bebop.lan.j2
+    dest: /etc/nginx/sites-available/nats.bebop.lan.conf
+
+- name: link new site
+  file:
+    src: /etc/nginx/sites-available/nats.bebop.lan.conf
+    dest: /etc/nginx/sites-enabled/nats.bebop.lan.conf
+    state: link
+  notify: Redémarrer Nginx
+
+- meta: flush_handlers
+
+##########################################
+# Init cluster credential
+##########################################
+
+- name: Create jwt directory
+  file:
+    path: "{{ nscdirectory }}"
+    state: directory
+    mode: "755"
+    owner: www-data
+    group: www-data
+
+- name: Create credentials
+  shell:
+    cmd: |
+      /usr/local/bin/nsc env --store {{ nscdirectory }}
+      /usr/local/bin/nsc add operator --name {{ name_cluster }}
+      /usr/local/bin/nsc add account --name SYS
+      /usr/local/bin/nsc edit account --name SYS
+      /usr/local/bin/nsc add user --name sys
+      /usr/local/bin/nsc edit operator --system-account SYS
+      /usr/local/bin/nsc edit operator --service-url https://nats.bebop.lan/jwt/v1/accounts/
+      /usr/local/bin/nsc add account --name WADM
+      /usr/local/bin/nsc edit account --name WADM --js-mem-storage -1 --js-disk-storage -1 --js-streams -1 --js-consumer -1
+      /usr/local/bin/nsc add user --account WADM --name wadmapp
+      /usr/local/bin/nsc add user --account WADM --name wadmconsumer
+
+- name: Add config for wasmcloud
+  shell:
+    cmd: |
+      /usr/local/bin/nsc edit user --name wadmconsumer --allow-pub-response --allow-pub "wadm.api.>,wasmbus.ctl.>"
+      # /usr/local/bin/nsc edit user --name wadmapp --allow-pub-response --allow-sub "wadm.api.>" --allow-pub "wadm.>,wasmbus.ctl.>,$JS.>"
+      /usr/local/bin/nsc edit user --name wadmapp --allow-pub-response --allow-sub "wadm.api.>,wasmbus.ctl.v1.>,wasmbus.evt.*.>,wasmbus.rpc.>,_INBOX.>" --allow-pub "wadm.>,wasmbus.ctl.>,wasmbus.evt.>,wasmbus.rpc.>,\$JS.>,\$KV.>,\$SYS.>"
+      # /usr/local/bin/nsc edit user --name wadmapp --allow-pub-response --allow-sub "wadm.api.>" --allow-pub "wadm.>,wasmbus.ctl.>,$JS.>"
+
+##########################################
+# Save and expose accounts
+##########################################
+
+- name: Extract and save accounts
+  shell:
+    cmd: |
+      ACCOUNT={{ item }}
+      OPERATOR="wasmcloud"
+      TARGET_DIR="/var/www/nats.bebop.lan/jwt/v1/accounts/"
+      ACCOUNT_PUBKEY=$(/usr/local/bin/nsc describe account $ACCOUNT --json | jq '.sub' | sed 's/"//g' )
+      JWT_PATH="{{ nscdirectory }}/$OPERATOR/accounts/$ACCOUNT/$ACCOUNT.jwt"
+      echo "📤 Copying $JWT_PATH to $TARGET_DIR$ACCOUNT_PUBKEY.jwt"
+      cp $JWT_PATH $TARGET_DIR$ACCOUNT_PUBKEY.jwt
+  loop:
+    - WADM
+    - SYS
+
+- name: change permission
+  shell: "chown -R www-data:www-data /var/www/nats.bebop.lan"
+
+##########################################
+# Catch all credentials accounts
+##########################################
+
+- name: catch sys creds file
+  command: "cat /root/.local/share/nats/nsc/keys/creds/{{ name_cluster }}/SYS/sys.creds"
+  register: __syscreds
+
+- name: catch wadmapp creds file
+  command: "cat /root/.local/share/nats/nsc/keys/creds/{{ name_cluster }}/WADM/wadmapp.creds"
+  register: __wadmappcreds
+
+- name: catch wadmconsumer creds file
+  command: "cat /root/.local/share/nats/nsc/keys/creds/{{ name_cluster }}/WADM/wadmconsumer.creds"
+  register: __consumercreds
+
+##########################################
+# Send all server credentials accounts
+##########################################
+
+# - name: Fetch creds simple
+#   fetch:
+#     src: "/root/.local/share/nats/nsc/keys/creds/{{ name_cluster }}/WADM/{{ item }}"
+#     dest: "credentials/"
+#     flat: yes
+#   loop:
+#     - "wadmapp.creds"
+#     - "wadmconsumer.creds"
+
+# - name: Fetch creds system
+#   fetch:
+#     src: "/root/.local/share/nats/nsc/keys/creds/{{ name_cluster }}/SYS/{{ item }}"
+#     dest: "credentials/"
+#     flat: yes
+#   loop:
+#     - "sys.creds"
+
+- name: Save credentials wadmapp
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __wadmappcreds.stdout }}"
+    dest: /srv/creds/wadmapp.creds
+    owner: nats
+    group: nats
+    mode: "0640"
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: __wadmappcreds is defined
+
+- name: Save credentials consumer
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __consumercreds.stdout }}"
+    dest: /srv/creds/consumer.creds
+    owner: nats
+    group: nats
+    mode: "0640"
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: __consumercreds is defined
+
+- name: Save credentials sys
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __syscreds.stdout }}"
+    dest: /srv/creds/sys.creds
+    owner: nats
+    group: nats
+    mode: "0640"
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: __syscreds is defined
+
+##########################################
+# Send all leaf credentials accounts
+##########################################
+
+- name: Save credentials wadmapp
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __wadmappcreds.stdout }}"
+    dest: /srv/creds/wadmapp.creds
+    owner: nats
+    group: nats
+    mode: "0640"
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
+  when: __wadmappcreds is defined
+
+- name: Save credentials consumer
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __consumercreds.stdout }}"
+    dest: /srv/creds/consumer.creds
+    owner: nats
+    group: nats
+    mode: "0640"
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
+  when: __consumercreds is defined
+
+##########################################
+# Send operator jwt
+##########################################
+
+# - name: Fetch operator
+#   fetch:
+#     src: "{{ nscdirectory }}/wasmcloud/wasmcloud.jwt"
+#     dest: "credentials/"
+#     flat: yes
+
+##########################################
+# Send operator jwt
+##########################################
+
+- name: catch operator JWT
+  command: "cat {{ nscdirectory }}/wasmcloud/wasmcloud.jwt"
+  register: __operator
+
+# - name: Debug
+#   debug:
+#     msg: "{{ __operator.stdout }}"
+#   tags:
+#     - loop
+
+# - name: Debug
+#   debug:
+#     msg: "{{ item }}"
+#   loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+#   tags:
+#     - loop
+
+- name: Save operator register
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __operator.stdout }}"
+    dest: /srv/jwt/operator.jwt
+    owner: nats
+    group: nats
+    mode: "0640"
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: __operator is defined
+
+##########################################
+# Add ip address nats
+##########################################
+
+# - name: Add nats address
+#   lineinfile:
+#     dest: /etc/hosts
+#     backup: yes
+#     line: 192.188.10.110 nats.bebop.lan
+
+##########################################
+# Create contexts
+##########################################
+
+- name: Create context on the servers
+  delegate_to: "{{ item }}"
+  shell:
+    cmd: |
+      nats context add main-sys      --colors red    --creds /srv/creds/sys.creds
+      nats context add main-wadmapp  --colors green  --creds /srv/creds/wadmapp.creds
+      nats context add main-consumer --colors yellow --creds /srv/creds/wadmconsumer.creds
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+##########################################
+# Extract ID System Account
+##########################################
+
+- name: Extract the system account
+  shell:
+    cmd: |
+      ACCOUNT=SYS
+      ACCOUNT_PUBKEY=$(/usr/local/bin/nsc describe account $ACCOUNT --json | jq '.sub' | sed 's/"//g' )
+      echo $ACCOUNT_PUBKEY
+  register: __sys_account
+  tags:
+    - sysaccount
+
+- name: Debug
+  debug:
+    msg: "{{ __sys_account.stdout }}"
+  tags:
+    - sysaccount
+
+- name: Replace systemc_account
+  delegate_to: "{{ item }}"
+  shell:
+    cmd: |
+      sed -i "s/#system_account:.*$/system_account: {{ __sys_account.stdout }}/g" /etc/nats-server.conf
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: __sys_account is defined
+  tags:
+    - sysaccount
+
+##########################################
+# Reload nginx servers
+##########################################
+
+# - name: Redémarrer Nginx
+#   service:
+#     name: nginx
+#     state: restarted
+
+# - meta: flush_handlers
+
+##########################################
+# Root Cerificate
+##########################################
+
+- name: Create Root Certificate
+  shell:
+    cmd: |
+      openssl genrsa -out /tmp/ca.key 4096
+      openssl req -x509 -new -nodes -key /tmp/ca.key -sha256 -days 3650 -out /tmp/ca.crt -subj "/CN=NATS-RootCA"
+
+- name: ca.crt
+  shell: "cat /tmp/ca.crt"
+  register: __ca_crt
+  tags:
+    - certify
+
+- name: ca.key
+  shell: "cat /tmp/ca.key"
+  register: __ca_key
+  tags:
+    - certify
+
+##########################################
+# Node Server Certificate
+##########################################
+
+- name: Save ca.crt register
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __ca_crt.stdout }}"
+    dest: /srv/certs/ca.crt
+    mode: "0600"
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: __ca_crt is defined
+  tags:
+    - certify
+
+- name: Save ca.key register
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __ca_key.stdout }}"
+    dest: /srv/certs/ca.key
+    mode: "0600"
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: __ca_key is defined
+  tags:
+    - certify
+
+- name: Certificate
+  delegate_to: "{{ item  }}"
+  shell:
+    cmd: |
+      NODE_NAME=$(hostname)
+      IPADDRESS=$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+      openssl genrsa -out /srv/certs/$NODE_NAME.key 2048
+      openssl req -new -key /srv/certs/$NODE_NAME.key -out /srv/certs/$NODE_NAME.csr -subj "/CN=$NODE_NAME"
+      cat > /srv/certs/$NODE_NAME.ext <<EOF
+      subjectAltName = DNS:$NODE_NAME,IP:$IPADDRESS
+      EOF
+      openssl x509 -req -in /srv/certs/$NODE_NAME.csr -CA /srv/certs/ca.crt -CAkey /srv/certs/ca.key -CAcreateserial \
+      -out /srv/certs/$NODE_NAME.crt -days 365 -sha256 -extfile /srv/certs/$NODE_NAME.ext
+      chown -R nats:nats /srv/certs
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  tags:
+    - certify
+
+##########################################
+# Node Leaf Certificate
+##########################################
+
+- name: Save ca.crt register
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __ca_crt.stdout }}"
+    dest: /srv/certs/ca.crt
+    mode: "0600"
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
+  when: __ca_crt is defined
+  tags:
+    - certify
+
+- name: Save ca.key register
+  delegate_to: "{{ item }}"
+  copy:
+    content: "{{ __ca_key.stdout }}"
+    dest: /srv/certs/ca.key
+    mode: "0600"
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
+  when: __ca_key is defined
+  tags:
+    - certify
+
+- name: Certificate
+  delegate_to: "{{ item  }}"
+  shell:
+    cmd: |
+      NODE_NAME=$(hostname)
+      IPADDRESS=$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+      openssl genrsa -out /srv/certs/$NODE_NAME.key 2048
+      openssl req -new -key /srv/certs/$NODE_NAME.key -out /srv/certs/$NODE_NAME.csr -subj "/CN=$NODE_NAME"
+      cat > /srv/certs/$NODE_NAME.ext <<EOF
+      subjectAltName = DNS:$NODE_NAME,IP:$IPADDRESS
+      EOF
+      openssl x509 -req -in /srv/certs/$NODE_NAME.csr -CA /srv/certs/ca.crt -CAkey /srv/certs/ca.key -CAcreateserial \
+      -out /srv/certs/$NODE_NAME.crt -days 365 -sha256 -extfile /srv/certs/$NODE_NAME.ext
+      chown -R nats:nats /srv/certs
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
+  tags:
+    - certify
+
+##########################################
+# Reload nats servers
+##########################################
+
+- name: Enable server daemon
+  delegate_to: "{{ item }}"
+  service:
+    name: nats-server
+    enabled: true
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+
+- name: Reload server daemon
+  delegate_to: "{{ item }}"
+  service:
+    name: nats-server
+    state: restarted
+    daemon_reload: true
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+
+##########################################
+# Reload nats leafs
+##########################################
+
+- name: Enable server daemon
+  delegate_to: "{{ item }}"
+  service:
+    name: nats-server
+    enabled: true
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
+
+- name: Reload leaf daemon
+  delegate_to: "{{ item }}"
+  service:
+    name: nats-server
+    state: restarted
+    daemon_reload: true
+  loop: "{{ groups | list | sort | select('match','^leafs$') | map('extract',groups) | flatten }}"
+
+##########################################
+# Create contexts
+##########################################
+
+- name: Create context on the servers
+  delegate_to: "{{ item }}"
+  shell:
+    cmd: |
+      nats context save main-sys      --creds /srv/creds/sys.creds
+      nats context save main-wadmapp  --creds /srv/creds/wadmapp.creds
+      nats context save main-consumer --creds /srv/creds/wadmconsumer.creds
+  loop: "{{ groups | list | sort | select('match','^servers$') | map('extract',groups) | flatten }}"
+  when: ansible_name in groups['servers']

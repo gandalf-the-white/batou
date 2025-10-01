@@ -1,0 +1,50 @@
+---
+- name: install Nats on servers
+  hosts: servers
+  become: true
+  serial: 1
+
+  vars:
+    prefix: ${prefix}
+    oracle: ${oracle}
+    harbor: ${harbor}
+    name_cluster: ${name_cluster}
+    port_cluster: ${port_cluster}
+    area: ${area}
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  environment:
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  roles:
+    - nats
+    # - telemetry
+
+- name: install Nats on leafs
+  hosts: leafs
+  become: true
+  serial: 1
+
+  vars:
+    prefix: ${prefix}
+    oracle: ${oracle}
+    harbor: ${harbor}
+    name_cluster: ${name_cluster}
+    port_cluster: ${port_cluster}
+    area: ${area}
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  environment:
+    http_proxy: "${proxy}"
+    https_proxy: "${proxy}"
+    no_proxy: "${noproxy}"
+
+  roles:
+    - nats
+    - dev

@@ -1,0 +1,19 @@
+#SPDX-License-Identifier: MIT-0
+---
+# handlers file for ansible/roles/nats
+- name: start nats
+  service:
+    name: nats-server
+    state: started
+    enabled: true
+
+- name: restart nats
+  service:
+    name: nats-server
+    state: restarted
+    daemon_reload: true
+
+- name: enable nats
+  service:
+    name: nats-server
+    enabled: true

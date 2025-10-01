@@ -1,0 +1,59 @@
+# Fichier de configuration Harbor
+# Réfs: paramètres standard de harbor.yml (hostname, https, notary, data_volume, etc.)
+# Voir doc "Configure the Harbor YML File".
+
+hostname: {{ harbor_hostname }}
+
+http:
+  port: 80
+
+https:
+  port: 443
+
+  certificate: "{{ tls_cert_path }}"
+  private_key: "{{ tls_key_path }}"
+
+harbor_admin_password: "{{ harbor_admin_password }}"
+
+data_volume: {{ harbor_data_volume }}
+
+# Active Notary (facultatif mais recommandé)
+notary:
+  enabled: {{ 'true' if enable_notary else 'false' }}
+
+# (Valeurs par défaut raisonnables; ajustez si nécessaire)
+database:
+  password: "changeit_db_pw"
+
+redis:
+  password: "changeit_redis_pw"
+
+trivy:
+  ignore_unfixed: true
+  skipUpdate: false
+
+jobservice:
+  max_job_workers: 10
+  max_job_duration_hours: 1
+  job_loggers:
+    - STD_OUTPUT
+    - FILE
+  logger_sweeper_duration: 1 #days
+
+notification:
+  # Maximum retry count for webhook job
+  webhook_job_max_retry: 3
+  # HTTP client timeout for webhook job
+  webhook_job_http_client_timeout: 3 #seconds
+
+proxy:
+  http_proxy:
+  https_proxy:
+  no_proxy: 127.0.0.1,localhost,core,registry
+
+log:
+  level: info
+  local:
+    rotate_count: 50
+    rotate_size: 200M
+    location: /var/log/harbor

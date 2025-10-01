@@ -1,0 +1,20 @@
+#SPDX-License-Identifier: MIT-0
+---
+# handlers file for roles/telemetry
+
+- name: restart otm
+  service:
+    name: otelcol
+    state: restarted
+    daemon_reload: true
+
+- name: enable prometheus
+  service:
+    name: prometheus
+    enabled: true
+
+- name: start prometheus
+  service:
+    name: prometheus
+    state: started
+    enabled: true

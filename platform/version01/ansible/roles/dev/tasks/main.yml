@@ -1,0 +1,75 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for ansible/roles/dev
+
+##########################################
+# Install GOLANG TINYGO
+##########################################
+
+- name: Download golang
+  get_url:
+    url: "{{ golang_url }}/go{{ golang_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/go{{ golang_version }}.linux-amd64.tar.gz"
+  when: ansible_name in groups['leafs']
+
+- name: Unarchive WADM
+  unarchive:
+    src: "/tmp/go{{ golang_version }}.linux-amd64.tar.gz"
+    dest: /usr/local
+    remote_src: yes
+  when: ansible_name in groups['leafs']
+
+- name: Add path
+  become: yes
+  become_user: spike
+  shell: "echo export PATH=$HOME/go/bin:/usr/local/go/bin:$PATH >> ~/.bashrc"
+  when: ansible_name in groups['leafs']
+
+- name: Download tinygo
+  get_url:
+    url: "{{ tinygo_url }}/v{{tinygo_version}}/tinygo_{{ tinygo_version }}_amd64.deb"
+    dest: "/tmp/tinygo_{{ tinygo_version }}_amd64.deb"
+  when: ansible_name in groups['leafs']
+
+- name: Install tinygo package
+  package:
+    deb: "/tmp/tinygo_{{ tinygo_version }}_amd64.deb"
+  when: ansible_name in groups['leafs']
+
+- name: Add path
+  become: yes
+  become_user: spike
+  shell: "echo export PATH=/usr/local/bin:$PATH >> ~/.bashrc"
+  when: ansible_name in groups['leafs']
+
+##########################################
+# Install RUST
+##########################################
+
+- name: Download Installer
+  become: true
+  become_user: spike
+  get_url:
+    url: https://sh.rustup.rs
+    dest: /tmp/sh.rustup.rs
+    mode: "0755"
+    force: "yes"
+  tags:
+    - rust
+  when: ansible_name in groups['leafs']
+
+- name: Install rust/cargo
+  become: true
+  become_user: spike
+  shell: /tmp/sh.rustup.rs -y
+  tags:
+    - rust
+  when: ansible_name in groups['leafs']
+
+- name: Add wasm32-wasip2
+  become: true
+  become_user: spike
+  shell: /home/spike/.cargo/bin/rustup target add wasm32-wasip2
+  tags:
+    - rust
+  when: ansible_name in groups['leafs']

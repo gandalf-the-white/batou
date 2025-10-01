@@ -1,0 +1,85 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for ansible/roles/dev
+- name: apt update
+  apt:
+    update-cache: yes
+    cache_valid_time: 3600
+
+- name: Install dependencies
+  apt:
+    name: "{{ packages }}"
+    state: present
+  when: ansible_name in groups['leafs'] and hostvars[inventory_hostname]['dev_enabled'] == true
+
+##########################################
+# Install GOLANG TINYGO
+##########################################
+
+- name: Download golang
+  get_url:
+    url: "{{ golang_url }}/go{{ golang_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/go{{ golang_version }}.linux-amd64.tar.gz"
+  when: ansible_name in groups['leafs'] and hostvars[inventory_hostname]['dev_enabled'] == true
+
+- name: Unarchive golang
+  unarchive:
+    src: "/tmp/go{{ golang_version }}.linux-amd64.tar.gz"
+    dest: /usr/local
+    remote_src: yes
+  when: ansible_name in groups['leafs']  and hostvars[inventory_hostname]['dev_enabled'] == true
+
+- name: Add path
+  become: yes
+  become_user: spike
+  shell: 'echo export PATH=\$HOME/go/bin:/usr/local/go/bin:\$PATH >> ~/.bashrc'
+  when: ansible_name in groups['leafs'] and hostvars[inventory_hostname]['dev_enabled'] == true
+
+- name: Download tinygo
+  get_url:
+    url: "{{ tinygo_url }}/v{{tinygo_version}}/tinygo_{{ tinygo_version }}_amd64.deb"
+    dest: "/tmp/tinygo_{{ tinygo_version }}_amd64.deb"
+  when: ansible_name in groups['leafs'] and hostvars[inventory_hostname]['dev_enabled'] == true
+
+- name: Install tinygo package
+  package:
+    deb: "/tmp/tinygo_{{ tinygo_version }}_amd64.deb"
+  when: ansible_name in groups['leafs'] and hostvars[inventory_hostname]['dev_enabled'] == true
+
+##########################################
+# Install RUST
+##########################################
+
+- name: Download Installer
+  become: true
+  become_user: spike
+  get_url:
+    url: https://sh.rustup.rs
+    dest: /tmp/sh.rustup.rs
+    mode: "0755"
+    force: "yes"
+  tags:
+    - rust
+  when: ansible_name in groups['leafs'] and hostvars[inventory_hostname]['dev_enabled'] == true
+
+- name: Install rust/cargo
+  become: true
+  become_user: spike
+  shell: /tmp/sh.rustup.rs -y
+  tags:
+    - rust
+  when: ansible_name in groups['leafs'] and hostvars[inventory_hostname]['dev_enabled'] == true
+
+- name: Add wasm32-wasip2
+  become: true
+  become_user: spike
+  shell: /home/spike/.cargo/bin/rustup target add wasm32-wasip2
+  tags:
+    - rust
+  when: ansible_name in groups['leafs'] and hostvars[inventory_hostname]['dev_enabled'] == true
+
+- name: Install wasm-tools
+  become: true
+  become_user: spike
+  shell: /home/spike/.cargo/bin/cargo install wasm-tools
+  when: ansible_name in groups['leafs'] and hostvars[inventory_hostname]['dev_enabled'] == true

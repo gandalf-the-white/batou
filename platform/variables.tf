@@ -22,8 +22,8 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 variable "userctn" { default = "spike" }
-variable "publkeyctn" { default = "~/.ssh/id_ed25519_proxmox.pub" }
-variable "privkeyctn" { default = "~/.ssh/id_ed25519_proxmox" }
+variable "publkeyctn" { default = "~/.ssh/id_ed25519_proxmox.pub" } #~/.ssh/id_ed25519_proxmox.pup
+variable "privkeyctn" { default = "~/.ssh/id_ed25519_proxmox" }     # ~/.ssh/id_ed25519_proxmox
 variable "token" {}
 variable "token_id" {}
 variable "fqdn_pmox" {}
@@ -31,9 +31,7 @@ variable "bridge" { default = "vmbr3" }
 variable "docker_login" {}
 variable "docker_password" {}
 
-# variable "proxy" { default = "http://proxy.rd.francetelecom.fr:8080" }
 variable "proxy" { default = "" }
-# variable "nameserver" { default = "10.192.65.254" }
 variable "nameserver" { default = "192.168.68.1" }
 variable "target_node" { default = "proxmox" }
 variable "cloudinit" { default = "local" }
@@ -57,26 +55,7 @@ variable "oracles" {
   default = [{
     name    = "oracle"
     octet   = "110"
-    memory  = 4096
-    cores   = 2
-    sockets = 1
-    swap    = 1024
-  }]
-}
-
-variable "harbors" {
-  type = list(object({
-    name    = string
-    octet   = string
-    memory  = number
-    cores   = number
-    sockets = number
-    swap    = number
-  }))
-  default = [{
-    name    = "harbor"
-    octet   = "111"
-    memory  = 6144
+    memory  = 2048
     cores   = 2
     sockets = 1
     swap    = 1024
@@ -104,7 +83,7 @@ variable "servers" {
     {
       name          = "irland"
       octet         = "90"
-      memory        = 4096
+      memory        = 2048
       cores         = 1
       sockets       = 1
       swap          = 256
@@ -119,7 +98,7 @@ variable "servers" {
     } # , {
     #   name          = "england"
     #   octet         = "91"
-    #   memory        = 4096
+    #   memory        = 2048
     #   cores         = 1
     #   sockets       = 1
     #   swap          = 256
@@ -131,10 +110,10 @@ variable "servers" {
     #   label         = "england"
     #   wadm          = "false"
     #   master        = "false"
-    # }, {
+    #   }, {
     #   name          = "france"
     #   octet         = "92"
-    #   memory        = 4096
+    #   memory        = 2048
     #   cores         = 1
     #   sockets       = 1
     #   swap          = 256
@@ -164,13 +143,12 @@ variable "leafs" {
     portattach    = number # listener port for leaf
     octetregistry = string # listener octet for registry
     label         = string
-    dev_enabled   = string # enable the dev environment
   }))
   default = [
     {
       name          = "dublin"
       octet         = "93"
-      memory        = 4096
+      memory        = 2048
       cores         = 2
       sockets       = 1
       swap          = 512
@@ -180,11 +158,10 @@ variable "leafs" {
       portattach    = 7422
       octetregistry = "110"
       label         = "dublin"
-      dev_enabled   = "true"
-    } # , {
+    }, # {
     #   name          = "paris"
     #   octet         = "94"
-    #   memory        = 4096
+    #   memory        = 2048
     #   cores         = 2
     #   sockets       = 1
     #   swap          = 256
@@ -194,21 +171,20 @@ variable "leafs" {
     #   portattach    = 7422
     #   octetregistry = "110"
     #   label         = "paris"
-    #   dev_enabled   = "false"
-    # }, {
-    #   name          = "galway"
-    #   octet         = "95"
-    #   memory        = 4096
-    #   cores         = 2
-    #   sockets       = 1
-    #   swap          = 256
-    #   natsport      = 4222
-    #   socketport    = 4223
-    #   octetattach   = "90"
-    #   portattach    = 7422
-    #   octetregistry = "110"
-    #   label         = "galway"
-    #   dev_enabled   = "false"
-    # }
+    # },
+    {
+      name          = "galway"
+      octet         = "95"
+      memory        = 2048
+      cores         = 2
+      sockets       = 1
+      swap          = 256
+      natsport      = 4222
+      socketport    = 4223
+      octetattach   = "90"
+      portattach    = 7422
+      octetregistry = "110"
+      label         = "galway"
+    }
   ]
 }

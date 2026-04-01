@@ -2,10 +2,12 @@
 
 * Introduction
 ** Objective
-To build a quiet simple WasmCloud cluster and some leafs, just for fun.
+To build a quiet simple /WasmCloud/ cluster and some leafs, just for fun.
 ** Overview
 [[images/PLATFORM-2025-07-21-1518.svg]]
+The IP address depend of your platform, so ...
 * Install
 ** Process
 + Check the /variables.tf/ file to define the architecture
 + Check the /main.tf/ to define the /subnet/ and /VLAN/
+Just to notice that more information is added on /DEMO.org/

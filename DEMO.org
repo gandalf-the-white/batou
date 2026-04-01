@@ -386,8 +386,8 @@ $ wash get inventory
 * Scenario
 ** Proxy
 #+begin_src emacs-lisp
-export http_proxy="http://proxy.rd.francetelecom.fr:8080"
-export https_proxy="http://proxy.rd.francetelecom.fr:8080"
+export http_proxy="http://proxy..fr:8080"
+export https_proxy="http://proxy.fr:8080"
 export no_proxy="127.0.0.1,localhost,192.189.190.110"
 #+end_src
 ** Deployment

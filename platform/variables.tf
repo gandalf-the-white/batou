@@ -36,7 +36,7 @@ variable "nameserver" { default = "192.168.68.1" }
 variable "target_node" { default = "proxmox" }
 variable "cloudinit" { default = "local" }
 variable "storage" { default = "local-lvm" }
-variable "template" { default = "ubuntu-2404-30" }
+variable "template" { default = "ubuntu-2404-tmpl" }
 
 variable "subnet" { default = "192.188.200" }
 variable "vlan" { default = "200" }
@@ -95,37 +95,37 @@ variable "servers" {
       label         = "irland"
       wadm          = "true"
       master        = "true"
-    } # , {
-    #   name          = "england"
-    #   octet         = "91"
-    #   memory        = 2048
-    #   cores         = 1
-    #   sockets       = 1
-    #   swap          = 256
-    #   natsport      = 4222
-    #   leafport      = 7422
-    #   socketport    = 4223
-    #   clusterport   = 6222
-    #   octetregistry = "110"
-    #   label         = "england"
-    #   wadm          = "false"
-    #   master        = "false"
-    #   }, {
-    #   name          = "france"
-    #   octet         = "92"
-    #   memory        = 2048
-    #   cores         = 1
-    #   sockets       = 1
-    #   swap          = 256
-    #   natsport      = 4222
-    #   leafport      = 7422
-    #   socketport    = 4223
-    #   clusterport   = 6222
-    #   octetregistry = "110"
-    #   label         = "france"
-    #   wadm          = "true"
-    #   master        = "false"
-    # }
+      }, {
+      name          = "england"
+      octet         = "91"
+      memory        = 2048
+      cores         = 1
+      sockets       = 1
+      swap          = 256
+      natsport      = 4222
+      leafport      = 7422
+      socketport    = 4223
+      clusterport   = 6222
+      octetregistry = "110"
+      label         = "england"
+      wadm          = "false"
+      master        = "false"
+      }, {
+      name          = "france"
+      octet         = "92"
+      memory        = 2048
+      cores         = 1
+      sockets       = 1
+      swap          = 256
+      natsport      = 4222
+      leafport      = 7422
+      socketport    = 4223
+      clusterport   = 6222
+      octetregistry = "110"
+      label         = "france"
+      wadm          = "true"
+      master        = "false"
+    }
   ]
 }
 
@@ -158,33 +158,33 @@ variable "leafs" {
       portattach    = 7422
       octetregistry = "110"
       label         = "dublin"
-    }, # {
-    #   name          = "paris"
-    #   octet         = "94"
-    #   memory        = 2048
-    #   cores         = 2
-    #   sockets       = 1
-    #   swap          = 256
-    #   natsport      = 4222
-    #   socketport    = 4223
-    #   octetattach   = "92"
-    #   portattach    = 7422
-    #   octetregistry = "110"
-    #   label         = "paris"
-    # },
-    {
-      name          = "galway"
-      octet         = "95"
+      }, {
+      name          = "paris"
+      octet         = "94"
       memory        = 2048
       cores         = 2
       sockets       = 1
       swap          = 256
       natsport      = 4222
       socketport    = 4223
-      octetattach   = "90"
+      octetattach   = "92"
       portattach    = 7422
       octetregistry = "110"
-      label         = "galway"
-    }
+      label         = "paris"
+    } # ,
+    # {
+    #   name          = "galway"
+    #   octet         = "95"
+    #   memory        = 2048
+    #   cores         = 2
+    #   sockets       = 1
+    #   swap          = 256
+    #   natsport      = 4222
+    #   socketport    = 4223
+    #   octetattach   = "90"
+    #   portattach    = 7422
+    #   octetregistry = "110"
+    #   label         = "galway"
+    # }
   ]
 }

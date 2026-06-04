@@ -47,3 +47,5 @@ tfplan
 
 *.creds
 *.jwt
+
+platform/ansible/*.yaml

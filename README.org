@@ -10,4 +10,4 @@ The IP address depend of your platform, so ...
 ** Process
 + Check the /variables.tf/ file to define the architecture
 + Check the /main.tf/ to define the /subnet/ and /VLAN/
-Just to notice that more information is added on /DEMO.org/
+Just to notice that more information is added on [[./DEMO.org][DEMO.org]]

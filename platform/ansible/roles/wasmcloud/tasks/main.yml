@@ -6,37 +6,45 @@
 # Install wash CLI
 ##########################################
 
-- name: Check if wash exists
-  stat:
-    path: /usr/local/bin/wash
-  register: stat_wash
+# - name: Check if wash exists
+#   stat:
+#     path: /usr/local/bin/wash
+#   register: stat_wash
 
-- name: Download wasmcloud cli
+# - name: Download wasmcloud cli
+#   get_url:
+#     url: "https://packagecloud.io/install/repositories/wasmcloud/core/script.deb.sh"
+#     dest: "/tmp/script.deb.sh"
+#     mode: "0740"
+#   when: not stat_wash.stat.exists
+
+# - name: Run wasmcloud script
+#   command: bash ./script.deb.sh
+#   become: yes
+#   become_user: root
+#   args:
+#     chdir: /tmp
+#   when: not stat_wash.stat.exists
+
+# - name: apt update
+#   apt:
+#     update-cache: yes
+#     cache_valid_time: 3600
+#   when: not stat_wash.stat.exists
+
+# - name: Install dependencies
+#   apt:
+#     name: "wash"
+#     state: present
+#   when: not stat_wash.stat.exists
+
+- name: Download Wash
   get_url:
-    url: "https://packagecloud.io/install/repositories/wasmcloud/core/script.deb.sh"
-    dest: "/tmp/script.deb.sh"
-    mode: "0740"
-  when: not stat_wash.stat.exists
-
-- name: Run wasmcloud script
-  command: bash ./script.deb.sh
-  become: yes
-  become_user: root
-  args:
-    chdir: /tmp
-  when: not stat_wash.stat.exists
-
-- name: apt update
-  apt:
-    update-cache: yes
-    cache_valid_time: 3600
-  when: not stat_wash.stat.exists
-
-- name: Install dependencies
-  apt:
-    name: "wash"
-    state: present
-  when: not stat_wash.stat.exists
+    url: "{{ wasmcloud_url }}/{{wasmcloud_version}}/wash-x86_64-unknown-linux-gnu"
+    dest: "/usr/local/bin/wash"
+    owner: root
+    group: root
+    mode: "0755"
 
   ##########################################
 # Install WADM
@@ -115,10 +123,11 @@
 
 - name: Download wasmcloud
   get_url:
-    url: "{{ wasmcloud_url }}/{{ wasmcloud_version}}/wasmcloud-x86_64-unknown-linux-musl"
+    url: "{{ wasmcloud_url }}/{{ wasmcloud_version}}/wash-x86_64-unknown-linux-gnu"
     dest: "/usr/local/bin/wasmcloud"
     mode: "0740"
   # when: ansible_name in groups['leafs']
+  tags: wasmcloud
 
 - name: Create Wasmcloud Service
   template:

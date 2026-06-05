@@ -95,37 +95,37 @@ variable "servers" {
       label         = "irland"
       wadm          = "true"
       master        = "true"
-      }, {
-      name          = "england"
-      octet         = "91"
-      memory        = 2048
-      cores         = 1
-      sockets       = 1
-      swap          = 256
-      natsport      = 4222
-      leafport      = 7422
-      socketport    = 4223
-      clusterport   = 6222
-      octetregistry = "110"
-      label         = "england"
-      wadm          = "false"
-      master        = "false"
-      }, {
-      name          = "france"
-      octet         = "92"
-      memory        = 2048
-      cores         = 1
-      sockets       = 1
-      swap          = 256
-      natsport      = 4222
-      leafport      = 7422
-      socketport    = 4223
-      clusterport   = 6222
-      octetregistry = "110"
-      label         = "france"
-      wadm          = "true"
-      master        = "false"
-    }
+      }# , {
+    #   name          = "england"
+    #   octet         = "91"
+    #   memory        = 2048
+    #   cores         = 1
+    #   sockets       = 1
+    #   swap          = 256
+    #   natsport      = 4222
+    #   leafport      = 7422
+    #   socketport    = 4223
+    #   clusterport   = 6222
+    #   octetregistry = "110"
+    #   label         = "england"
+    #   wadm          = "false"
+    #   master        = "false"
+    #   }, {
+    #   name          = "france"
+    #   octet         = "92"
+    #   memory        = 2048
+    #   cores         = 1
+    #   sockets       = 1
+    #   swap          = 256
+    #   natsport      = 4222
+    #   leafport      = 7422
+    #   socketport    = 4223
+    #   clusterport   = 6222
+    #   octetregistry = "110"
+    #   label         = "france"
+    #   wadm          = "true"
+    #   master        = "false"
+    # }
   ]
 }
 
@@ -158,20 +158,21 @@ variable "leafs" {
       portattach    = 7422
       octetregistry = "110"
       label         = "dublin"
-      }, {
-      name          = "paris"
-      octet         = "94"
-      memory        = 2048
-      cores         = 2
-      sockets       = 1
-      swap          = 256
-      natsport      = 4222
-      socketport    = 4223
-      octetattach   = "92"
-      portattach    = 7422
-      octetregistry = "110"
-      label         = "paris"
-    } # ,
+      }# , {
+    #   name          = "paris"
+    #   octet         = "94"
+    #   memory        = 2048
+    #   cores         = 2
+    #   sockets       = 1
+    #   swap          = 256
+    #   natsport      = 4222
+    #   socketport    = 4223
+    #   octetattach   = "92"
+    #   portattach    = 7422
+    #   octetregistry = "110"
+    #   label         = "paris"
+    # }
+    # ,
     # {
     #   name          = "galway"
     #   octet         = "95"

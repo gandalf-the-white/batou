@@ -10,4 +10,6 @@ The IP address depend of your platform, so ...
 ** Process
 + Check the /variables.tf/ file to define the architecture
 + Check the /main.tf/ to define the /subnet/ and /VLAN/
-Just to notice that more information is added on [[./DEMO.org][DEMO.org]]
++ VMs are connected on /vmbr3/ bridge though an opnsense instance
++ template is just a simple ubuntu template downloaded on the net
+Just to notice that more information relative to the architecture is added on [[./DEMO.org][DEMO.org]]

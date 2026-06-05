@@ -21,7 +21,7 @@
 
   roles:
     - nats
-    - telemetry
+    # - telemetry
 
 - name: install Nats on leafs
   hosts: leafs
@@ -45,4 +45,4 @@
 
   roles:
     - nats
-    - dev
+    # - dev
